@@ -16,7 +16,6 @@ demo/
 compare/
 
 # images/
-images_det/
 
 models/*
 predata_dandan/multitask/*.json
@@ -27,7 +26,6 @@ output/
 lib/datasets/compare_eval/
 backup/
 pick_2/ 
-images/
 logs/
 
 README_details.md
