@@ -28,6 +28,10 @@ def bb_intersection_over_union(boxA, boxB):
     # return the intersection over union value
     return iou
 
+def getCentroid(box):
+    x1, y1, x2, y2 = box
+    return (x1+x2)/2, (y1+y2)/2
+
 def check_boxes(bbox1,bbox2):
     x1,y1,x2,y2 = bbox1
     x21,y21,x22,y22 = bbox2
@@ -57,7 +61,9 @@ def checkIoU():
                 labels = data['classes']
                 label_list = data['label'].tolist()
                 maskrcnn_boxes = maskrcnn_boxes.reshape(-1,4)
-                doh_boxes = np.load(doh_path + filename.split('.')[0] + '.npy').reshape(-1,4)
+                doh_data = np.load(doh_path + filename.split('.')[0] + '.npz', allow_pickle=True)
+                doh_boxes = doh_data['objects']
+                doh_hands = doh_data['hands']
 
                 outputFile = open(os.path.join(doh_path + filename + ".txt"), 'w')
                 for j,doh_box in enumerate(doh_boxes):
@@ -84,7 +90,11 @@ def checkIoU():
                     else:
                         print("unknown", file = outputFile, end=',')
                         print("NaN", file = outputFile)
-                    
+
+                print("", file = outputFile)
+                if doh_hands.size > 1:
+                    for i, handbox in enumerate(doh_hands):
+                        print(getCentroid(handbox), file = outputFile)
 
                 outputFile.close()
 

@@ -64,5 +64,4 @@ def run():
         np.savez(save_path + filename.split('.')[0],classes=class_preds,boxes=boxes_preds,label=np.array(labels))
         out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
         cv2.imwrite(os.path.join(save_path, filename),out.get_image()[:, :, ::-1])
-        print("Saved: ", save_path)
 
