@@ -58,10 +58,12 @@ def checkIoU():
                 label_list = data['label'].tolist()
                 maskrcnn_boxes = maskrcnn_boxes.reshape(-1,4)
                 doh_boxes = np.load(doh_path + filename.split('.')[0] + '.npy').reshape(-1,4)
-                max_iou = -1
-                pred_label = None
-                for i,maskrcnn_box in enumerate(maskrcnn_boxes):
-                    for j,doh_box in enumerate(doh_boxes):
+
+                outputFile = open(os.path.join(doh_path + filename + ".txt"), 'w')
+                for j,doh_box in enumerate(doh_boxes):
+                    max_iou = -1
+                    for i,maskrcnn_box in enumerate(maskrcnn_boxes):
+                    
                         """
                         iou  = check_boxes(doh_box,maskrcnn_box)
                         if iou > max_iou:
@@ -72,14 +74,17 @@ def checkIoU():
                         if (val > max_iou):
                             bestLabel = str(label_list[labels[i]])
                             max_iou = val
-                outputFile = open(os.path.join(doh_path + filename + ".txt"), 'w')
-                if (doh_boxes.shape[0] == 0):
-                    print("No contact was made in file " + filename, file = outputFile)
-                elif (max_iou > IOU_THRESHOLD):
-                    print("Class: " + bestLabel, file = outputFile)
-                    print("IoU: " + str(max_iou), file = outputFile)
-                else:
-                    print("An unknown object was contacted in file " + filename, file = outputFile)
+
+                    if (doh_boxes.shape[0] == 0):
+                        print("No_contact", file = outputFile, end=',')
+                        print("NaN", file = outputFile)
+                    elif (max_iou > IOU_THRESHOLD):
+                        print(bestLabel, file = outputFile, end=',')
+                        print(str(max_iou), file = outputFile)
+                    else:
+                        print("unknown", file = outputFile, end=',')
+                        print("NaN", file = outputFile)
+                    
 
                 outputFile.close()
 

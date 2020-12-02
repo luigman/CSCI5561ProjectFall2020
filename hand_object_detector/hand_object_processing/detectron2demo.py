@@ -39,18 +39,20 @@ out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
 cv2.imshow("frame",out.get_image()[:, :, ::-1])
 cv2.waitKey(0)
 """
-
+subsample = 1000
 def run():
   for root, directories, filenames in os.walk(images_path): 
     for filename in filenames:  
       path = os.path.join(root,filename)
-      print(path)
-      pathList = path.split('/')
-      pathList[pathList.index("images")] = "maskrcnn_det"
-      save_path = "/".join(pathList[:-1]) + "/"
+    
       if (not path.endswith(".jpg")):
         print("Not a jpg. Skipping...")
-      else:
+      elif int(filename[6:-4]) % subsample == 0:
+        print(path)
+        pathList = path.split('/')
+        pathList[pathList.index("images")] = "maskrcnn_det"
+        save_path = "/".join(pathList[:-1]) + "/"
+
         im = cv2.imread(path)
         outputs = predictor(im)
         class_preds = outputs["instances"].pred_classes.cpu().numpy()
