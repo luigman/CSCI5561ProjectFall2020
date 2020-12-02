@@ -52,8 +52,6 @@ def run():
         print("Not a jpg. Skipping...")
       else:
         im = cv2.imread(path)
-        plt.imshow(im)
-        plt.show
         outputs = predictor(im)
         class_preds = outputs["instances"].pred_classes.cpu().numpy()
         boxes_preds = outputs["instances"].pred_boxes.tensor.cpu().numpy()
