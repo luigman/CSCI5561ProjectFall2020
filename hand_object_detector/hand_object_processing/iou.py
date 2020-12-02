@@ -39,41 +39,48 @@ def check_boxes(bbox1,bbox2):
     return False
 
 parent_dir = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir))
-doh_path = os.path.join(parent_dir, "images_det/npy/")
-mask_rcnn_path = os.path.join(parent_dir, "maskrcnn_det/npy/")
+#doh_path = os.path.join(parent_dir, "images_det/")
+mask_rcnn_path = os.path.join(parent_dir, "maskrcnn_det/")
 
 def checkIoU():
-    file_list = os.listdir(mask_rcnn_path)
-    for filename in file_list:
-        data = np.load(mask_rcnn_path + filename)
-        maskrcnn_boxes = data['boxes']
-        labels = data['classes']
-        label_list = data['label'].tolist()
-        maskrcnn_boxes = maskrcnn_boxes.reshape(-1,4)
-        doh_boxes = np.load(doh_path + filename.split('.')[0] + '.npy').reshape(-1,4)
-        max_iou = -1
-        pred_label = None
-        for i,maskrcnn_box in enumerate(maskrcnn_boxes):
-            for j,doh_box in enumerate(doh_boxes):
-                """
-                iou  = check_boxes(doh_box,maskrcnn_box)
-                if iou > max_iou:
-                    max_iou = iou
-                    pred_label = label_list[labels[i]]
-                """
-                val = bb_intersection_over_union(doh_box,maskrcnn_box)
-                if (val > max_iou):
-                    bestLabel = str(label_list[labels[i]])
-                    max_iou = val
-        outputFile = open(os.path.join(parent_dir, "images_det/" + filename + ".txt"), 'w')
-        if (doh_boxes.shape[0] == 0):
-            print("No contact was made in file " + filename, file = outputFile)
-        elif (max_iou > IOU_THRESHOLD):
-            print("Class: " + bestLabel, file = outputFile)
-            print("IoU: " + str(max_iou), file = outputFile)
-        else:
-            print("An unknown object was contacted in file " + filename, file = outputFile)
+    for root, directories, filenames in os.walk(mask_rcnn_path): 
+        for filename in filenames:
+            if (filename.endswith(".npz")):
+                path = os.path.join(root,filename)
+                print(path)
+                pathList = path.split('/')
+                pathList[pathList.index("maskrcnn_det")] = "images_det"
+                doh_path = "/".join(pathList[:-1]) + "/"
 
-        outputFile.close()
+                data = np.load(path)
+                maskrcnn_boxes = data['boxes']
+                labels = data['classes']
+                label_list = data['label'].tolist()
+                maskrcnn_boxes = maskrcnn_boxes.reshape(-1,4)
+                doh_boxes = np.load(doh_path + filename.split('.')[0] + '.npy').reshape(-1,4)
+                max_iou = -1
+                pred_label = None
+                for i,maskrcnn_box in enumerate(maskrcnn_boxes):
+                    for j,doh_box in enumerate(doh_boxes):
+                        """
+                        iou  = check_boxes(doh_box,maskrcnn_box)
+                        if iou > max_iou:
+                            max_iou = iou
+                            pred_label = label_list[labels[i]]
+                        """
+                        val = bb_intersection_over_union(doh_box,maskrcnn_box)
+                        if (val > max_iou):
+                            bestLabel = str(label_list[labels[i]])
+                            max_iou = val
+                outputFile = open(os.path.join(doh_path + filename + ".txt"), 'w')
+                if (doh_boxes.shape[0] == 0):
+                    print("No contact was made in file " + filename, file = outputFile)
+                elif (max_iou > IOU_THRESHOLD):
+                    print("Class: " + bestLabel, file = outputFile)
+                    print("IoU: " + str(max_iou), file = outputFile)
+                else:
+                    print("An unknown object was contacted in file " + filename, file = outputFile)
+
+                outputFile.close()
 
 #checkIoU()

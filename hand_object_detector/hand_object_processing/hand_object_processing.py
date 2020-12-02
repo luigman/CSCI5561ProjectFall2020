@@ -8,7 +8,7 @@ print("Running detectron")
 #detectron2demo.run()
 os.chdir('..') #Fixes some directory dependencies of hand_object_demo
 print("Running hand-object detection")
-hand_object_demo.run()
+#hand_object_demo.run()
 os.chdir('./hand_object_processing')
 print("Running IOU check")
 iou.checkIoU()
