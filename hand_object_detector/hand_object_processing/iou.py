@@ -65,6 +65,8 @@ def checkIoU():
                 doh_boxes = doh_data['objects']
                 doh_hands = doh_data['hands']
 
+                imageStabilization(doh_hands, maskrcnn_boxes, os.path.join(doh_path + filename.split('.')[0] + "stab"))
+
                 outputFile = open(os.path.join(doh_path + filename + ".txt"), 'w')
                 for j,doh_box in enumerate(doh_boxes):
                     max_iou = -1
@@ -107,5 +109,16 @@ def checkIoU():
                         print(cy, file = outputFile)
 
                 outputFile.close()
+
+def imageStabilization(doh_hands, maskrcnn_boxes, save_path):
+    if doh_hands.size > 1:
+        hand2obj = np.zeros((doh_hands.shape[0], maskrcnn_boxes.shape[0], 2))
+        for j,doh_box in enumerate(doh_hands):
+            for i,maskrcnn_box in enumerate(maskrcnn_boxes):
+                hand2obj[j,i,:] = np.subtract(getCentroid(maskrcnn_box), getCentroid(doh_box))
+    else:
+        hand2obj = None
+    np.save(save_path, hand2obj)
+    return
 
 #checkIoU()
