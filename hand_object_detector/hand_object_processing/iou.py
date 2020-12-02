@@ -68,6 +68,7 @@ def checkIoU():
                 outputFile = open(os.path.join(doh_path + filename + ".txt"), 'w')
                 for j,doh_box in enumerate(doh_boxes):
                     max_iou = -1
+                    bestBox = 0
                     for i,maskrcnn_box in enumerate(maskrcnn_boxes):
                     
                         """
@@ -79,22 +80,31 @@ def checkIoU():
                         val = bb_intersection_over_union(doh_box,maskrcnn_box)
                         if (val > max_iou):
                             bestLabel = str(label_list[labels[i]])
+                            bestBox = maskrcnn_box
                             max_iou = val
 
                     if (doh_boxes.shape[0] == 0):
                         print("No_contact", file = outputFile, end=',')
-                        print("NaN", file = outputFile)
+                        print("NaN,NaN,NaN", file = outputFile, end=',')
                     elif (max_iou > IOU_THRESHOLD):
+                        cx, cy = getCentroid(bestBox)
                         print(bestLabel, file = outputFile, end=',')
+                        print(cx, file = outputFile, end=',')
+                        print(cy, file = outputFile, end=',')
                         print(str(max_iou), file = outputFile)
                     else:
+                        cx, cy = getCentroid(doh_box)
                         print("unknown", file = outputFile, end=',')
+                        print(cx, file = outputFile, end=',')
+                        print(cy, file = outputFile, end=',')
                         print("NaN", file = outputFile)
 
                 print("", file = outputFile)
                 if doh_hands.size > 1:
                     for i, handbox in enumerate(doh_hands):
-                        print(getCentroid(handbox), file = outputFile)
+                        cx, cy = getCentroid(handbox)
+                        print(cx, file = outputFile, end=',')
+                        print(cy, file = outputFile)
 
                 outputFile.close()
 

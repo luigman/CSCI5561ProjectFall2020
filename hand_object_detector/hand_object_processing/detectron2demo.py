@@ -39,7 +39,7 @@ out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
 cv2.imshow("frame",out.get_image()[:, :, ::-1])
 cv2.waitKey(0)
 """
-subsample = 1000
+subsample = 5
 def run():
   for root, directories, filenames in os.walk(images_path): 
     for filename in filenames:  
