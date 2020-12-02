@@ -6,6 +6,7 @@ setup_logger()
 
 import numpy as np
 import os, json, cv2, random
+import  matplotlib.pyplot as plt
 
 # import some common detectron2 utilities
 from detectron2 import model_zoo
@@ -40,14 +41,28 @@ cv2.waitKey(0)
 """
 
 def run():
-  for filename in images_list:
-    im = cv2.imread(images_path + filename)
-    outputs = predictor(im)
-    class_preds = outputs["instances"].pred_classes.cpu().numpy()
-    boxes_preds = outputs["instances"].pred_boxes.tensor.cpu().numpy()
-    v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.0)
-    labels = v.metadata.get("thing_classes",None)
-    np.savez(save_path + "npy/" + filename.split('.')[0],classes=class_preds,boxes=boxes_preds,label=np.array(labels))
-    out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-    cv2.imwrite(os.path.join(save_path, filename),out.get_image()[:, :, ::-1])
+  for root, directories, filenames in os.walk(images_path): 
+    for filename in filenames:  
+      path = os.path.join(root,filename)
+      print(path)
+      pathList = path.split('/')
+      pathList[pathList.index("images")] = "maskrcnn_det"
+      save_path = "/".join(pathList[:-1]) + "/"
+      if (not path.endswith(".jpg")):
+        print("Not a jpg. Skipping...")
+      else:
+        im = cv2.imread(path)
+        plt.imshow(im)
+        plt.show
+        outputs = predictor(im)
+        class_preds = outputs["instances"].pred_classes.cpu().numpy()
+        boxes_preds = outputs["instances"].pred_boxes.tensor.cpu().numpy()
+        v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.0)
+        labels = v.metadata.get("thing_classes",None)
+        if not(os.path.exists(save_path)):
+          os.makedirs(save_path)
+        np.savez(save_path + filename.split('.')[0],classes=class_preds,boxes=boxes_preds,label=np.array(labels))
+        out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+        cv2.imwrite(os.path.join(save_path, filename),out.get_image()[:, :, ::-1])
+        print("Saved: ", save_path)
 

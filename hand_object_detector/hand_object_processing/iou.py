@@ -76,4 +76,4 @@ def checkIoU():
 
         outputFile.close()
 
-checkIoU()
+#checkIoU()
