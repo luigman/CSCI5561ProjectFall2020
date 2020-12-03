@@ -42,7 +42,7 @@ cv2.waitKey(0)
 subsample = 5
 def run():
   for root, directories, filenames in os.walk(images_path): 
-    for filename in filenames:  
+    for filename in sorted(filenames):  
       path = os.path.join(root,filename)
     
       if (not path.endswith(".jpg")):
@@ -64,4 +64,3 @@ def run():
         np.savez(save_path + filename.split('.')[0],classes=class_preds,boxes=boxes_preds,label=np.array(labels))
         out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
         cv2.imwrite(os.path.join(save_path, filename),out.get_image()[:, :, ::-1])
-

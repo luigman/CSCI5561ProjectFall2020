@@ -7,7 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import random
 import math
-
+import os
 
 # Needs tensorflow to run
 # If you don't want to install tf you can run in google colab
@@ -57,7 +57,6 @@ def create_fake_data(n_eq, n_p):
 
     fake_data = np.transpose(fake_data,(0,2,1))
     return fake_data
-
 
 def sample(data, num_samples, num_timesteps, desired_predicted_label):
     samples_x = np.zeros((num_samples,num_timesteps,2))
