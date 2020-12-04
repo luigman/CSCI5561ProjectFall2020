@@ -4,6 +4,7 @@ import time
 import pycocotools.mask as mask_util
 from detectron2.utils.colormap import random_color
 import random, string
+import matplotlib.pyplot as plt
 
 IOU_THRESHOLD = 0.2
 
@@ -55,6 +56,7 @@ def processData():
         video_visualizer = VideoVisualizer() #new visulizer instance for each directory (video)
         objIDlist = []
         detectedList = []
+        seriesList = []
         for filename in sorted(filenames):
             if filename.endswith(".npz"):# and int(filename[6:-4])<500):
                 frameNum = int(filename[6:-4])
@@ -91,7 +93,11 @@ def processData():
                 series_length = 20
                 if len(objIDlist) > series_length and frameInd % series_refresh_rate == 0:
                     if objIDlist[-1] is not None:
-                        print(np.all(objIDlist[-1] == [d.objID for d in detectedList[-1]]))
+                        objLabels = [d.label for d in detectedList[-1]]
+                        seriesObjs = []
+                        handObjs = []
+
+                        #Find all objects that are valid for 20 frames
                         for objID in objIDlist[-1]: #loop through objects in most recent frame
                             #Do the last 20 frames have objID in them?
                             checkArray = np.zeros(series_length)
@@ -104,7 +110,31 @@ def processData():
                                     #series[i] = 
                             #print(checkArray)
                             if np.all(checkArray):
-                                print("true")
+                                if label_list[objLabels[objIDlist[-1].index(objID)]] == 'person':
+                                    handObjs.append(objID)
+                                else:
+                                    seriesObjs.append(objID) #Gather all objects that are valid for 20 frames
+
+                        #Build series from valid objects
+                        for handID in handObjs:
+                            for objID in seriesObjs:
+                                series = np.zeros((20,2))
+                                for i in range(series_length):
+                                    objInd = objIDlist[-i-1].index(objID)
+                                    #print(objInd)
+                                    handInd = objIDlist[-i-1].index(handID)
+                                    objBboxes = [d.bbox for d in detectedList[-i-1]]
+
+                                    series[i,:] = np.subtract(getCentroid(objBboxes[objInd]), getCentroid(objBboxes[handInd]))
+                                if np.count_nonzero(series) > 0:
+                                    seriesList.append(series)
+                                    #plt.plot(series[:,0], series[:,1])
+                                    #plt.show()
+
+                        print(np.array(seriesList).shape)
+                        print(np.array(seriesList))
+                            #if objLabels[]
+                            
 
 
 
