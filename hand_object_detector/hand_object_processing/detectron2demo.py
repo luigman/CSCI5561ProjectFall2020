@@ -40,19 +40,21 @@ cv2.imshow("frame",out.get_image()[:, :, ::-1])
 cv2.waitKey(0)
 """
 subsample = 5
+vis = False
 def run():
   for root, directories, filenames in os.walk(images_path): 
     for filename in sorted(filenames):  
       path = os.path.join(root,filename)
-    
+      pathList = path.split('/')
+      pathList[pathList.index("images")] = "maskrcnn_det"
+      save_path = "/".join(pathList[:-1]) + "/"
       if (not path.endswith(".jpg")):
         print("Not a jpg. Skipping...")
+      elif os.path.isfile(save_path + filename.split('.')[0] + '.npz'):
+        print(filename + " already processed. Skipping...")
       elif int(filename[6:-4]) % subsample == 0:
-        print(path)
-        pathList = path.split('/')
-        pathList[pathList.index("images")] = "maskrcnn_det"
-        save_path = "/".join(pathList[:-1]) + "/"
-
+        print("Processing detectron2:" + path)
+        
         im = cv2.imread(path)
         outputs = predictor(im)
         class_preds = outputs["instances"].pred_classes.cpu().numpy()
@@ -62,5 +64,6 @@ def run():
         if not(os.path.exists(save_path)):
           os.makedirs(save_path)
         np.savez(save_path + filename.split('.')[0],classes=class_preds,boxes=boxes_preds,label=np.array(labels))
-        out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-        cv2.imwrite(os.path.join(save_path, filename),out.get_image()[:, :, ::-1])
+        if vis:
+          out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+          cv2.imwrite(os.path.join(save_path, filename),out.get_image()[:, :, ::-1])

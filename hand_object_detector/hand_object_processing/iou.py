@@ -86,7 +86,7 @@ def processData():
                     objIDlist.append(objIDs)
                     detectedList.append(detected)
 
-                    hand2obj = imageStabilization(doh_hands, maskrcnn_boxes, os.path.join(doh_path + filename.split('.')[0] + "stab"), objIDs)
+                    #hand2obj = imageStabilization(doh_hands, maskrcnn_boxes, os.path.join(doh_path + filename.split('.')[0] + "stab"), objIDs)
                     #findContactLabel(doh_boxes, doh_hands, maskrcnn_boxes, os.path.join(doh_path + filename + ".txt"), label_list, maskrcnn_labels, objIDs)
                 
                 series_refresh_rate = 10 #Defines a new series every x frames
@@ -128,57 +128,11 @@ def processData():
                                     series[i,:] = np.subtract(getCentroid(objBboxes[objInd]), getCentroid(objBboxes[handInd]))
                                 if np.count_nonzero(series) > 0:
                                     seriesList.append(series)
+                                    #Visualize hand-object tracking
                                     #plt.plot(series[:,0], series[:,1])
                                     #plt.show()
-
-                        print(np.array(seriesList).shape)
-                        print(np.array(seriesList))
-                            #if objLabels[]
-                            
-
-
-
-
-def loadData():
-    #OLD VERSION... REMOVE ONCE ASSIGN_COLORS IS WORKING
-    parent_dir = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir))
-    hand2obj_path = os.path.join(parent_dir, "hand_object_detector/images_det/")
-    data = []
-    for root, directories, filenames in os.walk(hand2obj_path): 
-        vidName = root.split('/')[-1]
-        print(vidName)
-        videoData = np.zeros((len(filenames)//4, 2))
-        for filename in filenames:
-            if (filename.endswith("stab.npy")):
-                print("  "+filename)
-                index = int(filename[6:-8])//10
-                stab = np.load(os.path.join(root,filename), allow_pickle=True)
-                if stab.size > 1:
-                    videoData[index,:] = stab[0,0,:]#.reshape(-1,2)
-
-        detected = [
-            _DetectedInstance(classes[i], boxes[i], mask_rle=None, color=None, ttl=8)
-            for i in range(num_instances)
-        ]
-        colors = self._assign_colors(detected)
-
-        if (videoData.size != 0):
-            plt.plot(videoData[:10,0],videoData[:10,1])
-            plt.plot(videoData[100:110,0],videoData[100:110,1])
-            plt.show()
-            #if len(dirname)==7:
-            #    print(dirname)
-            #if (filename.endswith("stab.npy")):
-            #    print(root.split('/')[-1])
-            #    print(dirname)
-            #
-            #    np.load(os.path.join(root,filename)).reshape(-1,2)
-
-    for root, dirs, files in os.walk(hand2obj_path):
-        dirs.sort()
-        for d in dirs:
-            print(os.path.join(root, d))
-
+        if len(seriesList) > 0:
+            np.save(os.path.join(root + "stab"), seriesList)
                 
 
 def imageStabilization(doh_hands, maskrcnn_boxes, save_path, objIDs):
