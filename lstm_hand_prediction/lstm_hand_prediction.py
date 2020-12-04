@@ -58,6 +58,20 @@ def create_fake_data(n_eq, n_p):
     fake_data = np.transpose(fake_data,(0,2,1))
     return fake_data
 
+def loadData():
+    parent_dir = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir))
+    series_path = os.path.join(parent_dir, "hand_object_detector/maskrcnn_det/")
+    series = []
+    for root, directories, filenames in os.walk(series_path): 
+        #vidName = root.split('/')[-1]
+        for filename in filenames:
+            if (filename.endswith("stab.npy")):
+                print("  "+filename)
+                seriesVid = np.load(os.path.join(root,filename), allow_pickle=True)
+                series.append(seriesVid)
+
+    return np.array(series).reshape(-1,20,2)
+
 def sample(data, num_samples, num_timesteps, desired_predicted_label):
     samples_x = np.zeros((num_samples,num_timesteps,2))
     samples_y = np.zeros((num_samples,1,2))
@@ -103,13 +117,12 @@ def visualize_multi_step(samples, model):
         plt.plot(compare[0],compare[1])
     plt.savefig('multi_step.png')
 
-
-
 def lstm_hand_prediction():
-    data = create_fake_data(2000, 20)
+    #data = create_fake_data(2000, 20)
+    data = loadData()
 
     #Right now the LSTM is trained to predict one step ahead based off of previous 8 timesteps
-    TT_SPLIT = 800
+    TT_SPLIT = data.shape[0]//5*4 #80-20 split
     train_x, test_x = np.split(data, [TT_SPLIT], 0)
     train_sample_x, train_sample_y = sample(train_x, 2000, 8, 1)
     test_sample_x, test_sample_y = sample(test_x, 200, 8, 1)
