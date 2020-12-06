@@ -69,7 +69,7 @@ def loadData():
                 if (filename.endswith("stab.npy")):
                     print("  "+filename)
                     seriesVid = np.load(os.path.join(root,filename), allow_pickle=True)
-                    series.append(seriesVid)
+                    series.append(seriesVid[:,:2]) #don't include labels for LSTM training
 
     return np.array(series).reshape(-1,20,2)
 
