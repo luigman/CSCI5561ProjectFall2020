@@ -49,90 +49,127 @@ def check_boxes(bbox1,bbox2):
 parent_dir = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir))
 #doh_path = os.path.join(parent_dir, "images_det/")
 mask_rcnn_path = os.path.join(parent_dir, "maskrcnn_det/")
-subsample = 5
 
-def processData():
+def processData(person_to_run, subsample):
     for root, directories, filenames in os.walk(mask_rcnn_path): 
         video_visualizer = VideoVisualizer() #new visulizer instance for each directory (video)
+        video_visualizer_hands = VideoVisualizer()
         objIDlist = []
+        handIDlist = []
         detectedList = []
+        detectedHandsList = []
         seriesList = []
-        for filename in sorted(filenames):
-            if filename.endswith(".npz"):# and int(filename[6:-4])<500):
-                frameNum = int(filename[6:-4])
-                frameInd = frameNum // subsample
-                path = os.path.join(root,filename)
-                pathList = path.split('/')
-                pathList[pathList.index("maskrcnn_det")] = "images_det"
-                doh_path = "/".join(pathList[:-1]) + "/"
+        
+        #if root.endswith("P01_107"):
+        if person_to_run in root:
+            for filename in sorted(filenames):
+                if filename.endswith(".npz"):# and int(filename[6:-4])<500):
+                    frameNum = int(filename.split('.')[0][6:])
+                    frameInd = frameNum // subsample
+                    path = os.path.join(root,filename)
+                    pathList = path.split('/')
+                    pathList[pathList.index("maskrcnn_det")] = "images_det"
+                    doh_path = "/".join(pathList[:-1]) + "/"
+                    print(doh_path + filename.split('.')[0] + '.npz')
 
-                if os.path.isfile(doh_path + filename.split('.')[0] + '.npz'):
-                    print(path)
-                    data = np.load(path)
-                    maskrcnn_boxes = data['boxes']
-                    maskrcnn_labels = data['classes']
-                    label_list = data['label'].tolist()
-                    maskrcnn_boxes = maskrcnn_boxes.reshape(-1,4)
-                    doh_data = np.load(doh_path + filename.split('.')[0] + '.npz', allow_pickle=True)
-                    doh_boxes = doh_data['objects']
-                    doh_hands = doh_data['hands']
+                    if os.path.isfile(doh_path + filename.split('.')[0] + '.npz'):
+                        print(path)
+                        data = np.load(path)
+                        maskrcnn_boxes = data['boxes']
+                        maskrcnn_labels = data['classes']
+                        label_list = data['label'].tolist()
+                        maskrcnn_boxes = maskrcnn_boxes.reshape(-1,4)
+                        doh_data = np.load(doh_path + filename.split('.')[0] + '.npz', allow_pickle=True)
+                        doh_boxes = doh_data['objects']
+                        doh_hands = doh_data['hands']
 
-                    detected = [
-                        _DetectedInstance(maskrcnn_labels[i], maskrcnn_boxes[i], mask_rle=None, color=None, ttl=8, objID=None)
-                        for i in range(len(maskrcnn_labels))
-                    ]
+                        contact = checkContact(doh_boxes, maskrcnn_boxes)
+
+                        detected = [
+                            _DetectedInstance(maskrcnn_labels[i], maskrcnn_boxes[i], mask_rle=None, color=None, ttl=8, objID=None, contact=contact[:,i])
+                            for i in range(len(maskrcnn_labels))
+                        ]
+                        if doh_hands.size > 1:
+                            detectedHands = [
+                                _DetectedInstance('hand', doh_hands[i], mask_rle=None, color=None, ttl=8, objID=None, contact=None)
+                                for i in range(doh_hands.shape[0])
+                            ]
+                        else:
+                            detectedHands = []
+                        
+                        objIDs = video_visualizer.assign_ids(detected)
+                        handIDs = video_visualizer_hands.assign_ids(detectedHands)
+                        objIDlist.append(objIDs)
+                        handIDlist.append(handIDs)
+                        detectedList.append(detected)
+                        detectedHandsList.append(detectedHands)
+
+                        #hand2obj = imageStabilization(doh_hands, maskrcnn_boxes, os.path.join(doh_path + filename.split('.')[0] + "stab"), objIDs)
+                        #findContactLabel(doh_boxes, doh_hands, maskrcnn_boxes, os.path.join(doh_path + filename + ".txt"), label_list, maskrcnn_labels, objIDs)
+                    else:
+                        print("No DOH file found for" + path)
                     
-                    objIDs = video_visualizer.assign_ids(detected)
-                    objIDlist.append(objIDs)
-                    detectedList.append(detected)
+                    series_refresh_rate = 10 #Defines a new series every x frames
+                    series_length = 20
+                    if len(objIDlist) > series_length and len(detectedHands) > 0 and frameInd % series_refresh_rate == 0:
+                        if objIDlist[-1] is not None:
+                            objLabels = [d.label for d in detectedList[-1]]
+                            seriesObjs = []
+                            handObjs = []
 
-                    #hand2obj = imageStabilization(doh_hands, maskrcnn_boxes, os.path.join(doh_path + filename.split('.')[0] + "stab"), objIDs)
-                    #findContactLabel(doh_boxes, doh_hands, maskrcnn_boxes, os.path.join(doh_path + filename + ".txt"), label_list, maskrcnn_labels, objIDs)
-                
-                series_refresh_rate = 10 #Defines a new series every x frames
-                series_length = 20
-                if len(objIDlist) > series_length and frameInd % series_refresh_rate == 0:
-                    if objIDlist[-1] is not None:
-                        objLabels = [d.label for d in detectedList[-1]]
-                        seriesObjs = []
-                        handObjs = []
+                            #Find all objects that are valid for 20 frames
+                            for objID in objIDlist[-1]: #loop through objects in most recent frame
+                                #Do the last 20 frames have objID in them?
+                                checkArray = np.zeros(series_length)
+                                series = np.zeros(series_length)
+                                for i in range(series_length): 
+                                    if objIDlist[-i-1] is None:
+                                        checkArray[i] = False
+                                    else:
+                                        checkArray[i] = objID in objIDlist[-i-1]
+                                        #series[i] = 
+                                #print(checkArray)
+                                if np.all(checkArray):
+                                    if label_list[objLabels[objIDlist[-1].index(objID)]] != 'person':
+                                        seriesObjs.append(objID) #Gather all objects that are valid for 20 frames
 
-                        #Find all objects that are valid for 20 frames
-                        for objID in objIDlist[-1]: #loop through objects in most recent frame
-                            #Do the last 20 frames have objID in them?
-                            checkArray = np.zeros(series_length)
-                            series = np.zeros(series_length)
-                            for i in range(series_length): 
-                                if objIDlist[-i-1] is None:
-                                    checkArray[i] = False
-                                else:
-                                    checkArray[i] = objID in objIDlist[-i-1]
-                                    #series[i] = 
-                            #print(checkArray)
-                            if np.all(checkArray):
-                                if label_list[objLabels[objIDlist[-1].index(objID)]] == 'person':
-                                    handObjs.append(objID)
-                                else:
-                                    seriesObjs.append(objID) #Gather all objects that are valid for 20 frames
+                            #Find all hands that are valid for 20 frames
+                            for handID in handIDlist[-1]: #loop through objects in most recent frame
+                                #Do the last 20 frames have objID in them?
+                                checkArray = np.zeros(series_length)
+                                series = np.zeros(series_length)
+                                for i in range(series_length): 
+                                    if handIDlist[-i-1] is None:
+                                        checkArray[i] = False
+                                    else:
+                                        checkArray[i] = handID in handIDlist[-i-1]
+                                        #series[i] = 
+                                #print(checkArray)
+                                if np.all(checkArray):
+                                    handObjs.append(handID) #Gather all objects that are valid for 20 frames
 
-                        #Build series from valid objects
-                        for handID in handObjs:
-                            for objID in seriesObjs:
-                                series = np.zeros((20,2))
-                                for i in range(series_length):
-                                    objInd = objIDlist[-i-1].index(objID)
-                                    #print(objInd)
-                                    handInd = objIDlist[-i-1].index(handID)
-                                    objBboxes = [d.bbox for d in detectedList[-i-1]]
+                            #Build series from valid objects
+                            for handID in handObjs:
+                                for objID in seriesObjs:
+                                    series = np.zeros((20,3))
+                                    for i in range(series_length):
+                                        objInd = objIDlist[-i-1].index(objID)
+                                        #print(objInd)
+                                        handInd = handIDlist[-i-1].index(handID)
+                                        objBboxes = [d.bbox for d in detectedList[-i-1]]
+                                        objContact = np.array([d.contact for d in detectedList[-i-1]]).T
+                                        handBboxes = [d.bbox for d in detectedHandsList[-i-1]]
 
-                                    series[i,:] = np.subtract(getCentroid(objBboxes[objInd]), getCentroid(objBboxes[handInd]))
-                                if np.count_nonzero(series) > 0:
-                                    seriesList.append(series)
-                                    #Visualize hand-object tracking
-                                    #plt.plot(series[:,0], series[:,1])
-                                    #plt.show()
-        if len(seriesList) > 0:
-            np.save(os.path.join(root + "stab"), seriesList)
+                                        series[i,0:2] = np.subtract(getCentroid(objBboxes[objInd]), getCentroid(handBboxes[handInd]))
+                                        series[i,2] = objContact[handInd, objInd]
+                                    if np.count_nonzero(series) > 0:
+                                        seriesList.append(series)
+                                        #Visualize hand-object tracking
+                                        #plt.plot(series[:,0], series[:,1])
+                                        #plt.scatter(series[:,0], series[:,1], c=series[:,2])
+                                        #plt.show()
+            if len(seriesList) > 0:
+                np.save(os.path.join(root + "stab"), seriesList)
                 
 
 def imageStabilization(doh_hands, maskrcnn_boxes, save_path, objIDs):
@@ -145,6 +182,31 @@ def imageStabilization(doh_hands, maskrcnn_boxes, save_path, objIDs):
         hand2obj = None
     np.save(save_path, hand2obj)
     return hand2obj
+
+def checkContact(doh_boxes, maskrcnn_boxes):
+    """
+    Cross-checks IoU for doh_boxes and maskrcnn_boxes. If m=doh_boxes.shape[0] and
+    n = maskrcnn_boxes.shape[0], output is m*n array that indicates which boxes are
+    being contacted.
+    """
+    if doh_boxes.size < 2:
+        return np.zeros((1, maskrcnn_boxes.shape[0]))
+    
+    contact = np.zeros((doh_boxes.shape[0], maskrcnn_boxes.shape[0]))
+    for j,doh_box in enumerate(doh_boxes):
+        max_iou = -1
+        bestInd = -1
+        for i,maskrcnn_box in enumerate(maskrcnn_boxes):
+            val = bb_intersection_over_union(doh_box,maskrcnn_box)
+            if (val > max_iou):
+                bestInd = i
+                max_iou = val
+        if max_iou > IOU_THRESHOLD:
+            contact[j, bestInd] = 1
+
+    return contact
+
+
 
 def findContactLabel(doh_boxes, doh_hands, maskrcnn_boxes, save_path, label_list, labels, objIDs):
     """
@@ -279,14 +341,15 @@ class _DetectedInstance:
             the instance color can be transferred to objects in the next two frames.
     """
 
-    __slots__ = ["label", "bbox", "mask_rle", "color", "ttl", "objID"]
+    __slots__ = ["label", "bbox", "mask_rle", "color", "ttl", "objID", "contact"]
 
-    def __init__(self, label, bbox, mask_rle, color, ttl, objID):
+    def __init__(self, label, bbox, mask_rle, color, ttl, objID, contact):
         self.label = label
         self.bbox = bbox
         self.mask_rle = mask_rle
         self.color = color
         self.ttl = ttl
         self.objID = objID
+        self.contact = contact
 
 #checkIoU()
