@@ -64,11 +64,12 @@ def loadData():
     series = []
     for root, directories, filenames in os.walk(series_path): 
         #vidName = root.split('/')[-1]
-        for filename in filenames:
-            if (filename.endswith("stab.npy")):
-                print("  "+filename)
-                seriesVid = np.load(os.path.join(root,filename), allow_pickle=True)
-                series.append(seriesVid)
+        if 'P99' in root: #only load "nice" data
+            for filename in filenames:
+                if (filename.endswith("stab.npy")):
+                    print("  "+filename)
+                    seriesVid = np.load(os.path.join(root,filename), allow_pickle=True)
+                    series.append(seriesVid)
 
     return np.array(series).reshape(-1,20,2)
 
