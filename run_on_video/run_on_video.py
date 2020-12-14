@@ -22,6 +22,7 @@ modelLSTM = tf.keras.models.load_model('../lstm_hand_prediction/lstm_model_best'
 
 for filename in sorted(os.listdir(vidName)):
     showPlot = False
+    predictedSeries = []
     print(filename)
     img = cv.imread(vidName+'/'+filename)
     frameNum = int(filename.split('.')[0][6:])
@@ -61,6 +62,10 @@ for filename in sorted(os.listdir(vidName)):
         plt.plot(objx-pastSeries[:,0], objy-pastSeries[:,1], label='Past Series')
         plt.plot(objx-futureSeries[:,0], objy-futureSeries[:,1], label='Future Series')
         plt.plot(objx-predictedSeries[:,0], objy-predictedSeries[:,1], label='Predicted Series')
+
+    if len(predictedSeries) > 0:
+        print("Has prediction")
+        #MLP code goes here
 
     if showPlot:
         plt.imshow(img)
