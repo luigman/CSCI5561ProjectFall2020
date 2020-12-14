@@ -128,7 +128,7 @@ lstm_predictions = []
 true_positions = []
 contact = []
 y1 = []
-modelLSTM = tf.keras.models.load_model('../lstm_hand_prediction/lstm_model_best')
+modelLSTM = tf.keras.models.load_model('../lstm_hand_prediction/lstm_model_best',compile=False)
 for vid in test_vids:
     for series in vid:
         for i in range(len(series) - 13):

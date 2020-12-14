@@ -18,7 +18,8 @@ handsList = meta['handsList']
 objList = meta['objList']
 objIDs = meta['objIDs']
 
-modelLSTM = tf.keras.models.load_model('../lstm_hand_prediction/lstm_model_best')
+modelLSTM = tf.keras.models.load_model('../lstm_hand_prediction/lstm_model_best',compile=False)
+modelMLP = tf.keras.models.load_model('../mlp_contact_prediction/mlp_model',compile=False)
 
 for filename in sorted(os.listdir(vidName)):
     showPlot = False
@@ -66,6 +67,13 @@ for filename in sorted(os.listdir(vidName)):
     if len(predictedSeries) > 0:
         print("Has prediction")
         #MLP code goes here
+        def rowNorm(X):
+            return np.sum(np.abs(X)**2,axis=-1)**(1./2)
+        x1 = rowNorm(predictedSeries)
+        m = 1106.50695399817    # Max value of training data after taking norm. Need to divide by this to get accurate results from the model
+        x1 = (x1 / m).reshape((-1,5))
+        y_pred = modelMLP.predict(x1)
+        contact_prob = y_pred[0,1]
 
     if showPlot:
         plt.imshow(img)
