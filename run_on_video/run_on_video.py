@@ -51,7 +51,7 @@ for filename in sorted(os.listdir(vidName)):
         if time != frameNum - 5:
             continue
         showPlot = True
-        pastSeries = np.flipud(seriesList[i][5:13]) #flip because LSTM is prediction backwards
+        pastSeries = np.flipud(seriesList[i][5:13]) #flip because LSTM is predicting backwards
         futureSeries = seriesList[i][:5]
         predictedSeries = lstm_return_predict(pastSeries[:,:2], 5, modelLSTM)
 
