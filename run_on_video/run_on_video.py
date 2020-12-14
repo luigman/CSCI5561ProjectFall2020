@@ -17,6 +17,7 @@ times = meta['times']
 handsList = meta['handsList']
 objList = meta['objList']
 objIDs = meta['objIDs']
+objBBsPrev = meta['objBBsPrev']
 
 modelLSTM = tf.keras.models.load_model('../lstm_hand_prediction/lstm_model_best',compile=False)
 modelMLP = tf.keras.models.load_model('../mlp_contact_prediction/mlp_model',compile=False)
@@ -25,8 +26,11 @@ for filename in sorted(os.listdir(vidName)):
     showPlot = False
     predictedSeries = []
     print(filename)
-    img = cv.imread(vidName+'/'+filename)
     frameNum = int(filename.split('.')[0][6:])
+    if frameNum < 5:
+        continue
+    img = cv.imread(vidName+'/frame_'+str(frameNum-5).zfill(10)+'.jpg')
+    print("Displaying:", vidName+'/frame_'+str(frameNum-5).zfill(10)+'.jpg')
     
     #Get true past and future hand positions
     trueHand = []
@@ -47,19 +51,13 @@ for filename in sorted(os.listdir(vidName)):
         if time != frameNum - 5:
             continue
         showPlot = True
-        pastSeries = seriesList[i][-13:-5]
-        futureSeries = seriesList[i][-5:]
+        pastSeries = np.flipud(seriesList[i][5:13]) #flip because LSTM is prediction backwards
+        futureSeries = seriesList[i][:5]
         predictedSeries = lstm_return_predict(pastSeries[:,:2], 5, modelLSTM)
 
-        #Get object position of series
-        for obj in objList[i]:
-            if obj.objID != objIDs[i]:
-                continue
-            objx, objy = getCentroid(obj.bbox)
-            seriesObj = obj
-            print(obj.label)
+        objx, objy = getCentroid(objBBsPrev[i])
 
-        cv.rectangle(img,(seriesObj.bbox[0], seriesObj.bbox[1]),(seriesObj.bbox[2], seriesObj.bbox[3]), (0,255,0),2)
+        cv.rectangle(img,(objBBsPrev[i][0], objBBsPrev[i][1]),(objBBsPrev[i][2], objBBsPrev[i][3]), (0,255,0),2)
         plt.plot(objx-pastSeries[:,0], objy-pastSeries[:,1], label='Past Series')
         plt.plot(objx-futureSeries[:,0], objy-futureSeries[:,1], label='Future Series')
         plt.plot(objx-predictedSeries[:,0], objy-predictedSeries[:,1], label='Predicted Series')
