@@ -59,11 +59,14 @@ def processData(person_to_run, subsample):
         detectedList = []
         detectedHandsList = []
         seriesList = []
+        timesList = []
+        objIDsList = []
+        objBBsList = []
         
         #if root.endswith("P01_107"):
         if person_to_run in root:
             for filename in sorted(filenames):
-                if filename.endswith(".npz"):# and int(filename[6:-4])<500):
+                if filename.endswith(".npz") and 'meta' not in filename:# and int(filename[6:-4])<500):
                     frameNum = int(filename.split('.')[0][6:])
                     frameInd = frameNum // subsample
                     path = os.path.join(root,filename)
@@ -109,7 +112,7 @@ def processData(person_to_run, subsample):
                     else:
                         print("No DOH file found for" + path)
                     
-                    series_refresh_rate = 10 #Defines a new series every x frames
+                    series_refresh_rate = 1 #Defines a new series every x frames
                     series_length = 20
                     if len(objIDlist) > series_length and len(detectedHands) > 0 and frameInd % series_refresh_rate == 0:
                         if objIDlist[-1] is not None:
@@ -164,12 +167,17 @@ def processData(person_to_run, subsample):
                                         series[i,2] = objContact[handInd, objInd]
                                     if np.count_nonzero(series) > 0:
                                         seriesList.append(series)
+                                        timesList.append(frameNum)
+                                        objIDsList.append(objID)
+                                        objInd = objIDlist[-5].index(objID)
+                                        objBBsList.append([d.bbox for d in detectedList[-5]][objInd])
                                         #Visualize hand-object tracking
                                         #plt.plot(series[:,0], series[:,1])
                                         #plt.scatter(series[:,0], series[:,1], c=series[:,2])
                                         #plt.show()
             if len(seriesList) > 0:
                 np.save(os.path.join(root + "stab"), seriesList)
+                np.savez(os.path.join(root + "meta"), times = timesList, handsList=detectedHandsList, objList=detected, objIDs=objIDsList, objBBsPrev=objBBsList)
                 
 
 def imageStabilization(doh_hands, maskrcnn_boxes, save_path, objIDs):
