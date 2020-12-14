@@ -9,7 +9,6 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation
 from keras.utils import to_categorical
 import sys
-import os
 sys.path.append('../lstm_hand_prediction')
 from lstm_return_predict import lstm_return_predict
 
@@ -101,6 +100,7 @@ model.add(Dense(2, activation='softmax'))
 
 model.compile(optimizer='adam',loss='categorical_crossentropy', metrics=['accuracy'])
 model.fit(x_train, y_train, epochs=100)
+model.save('mlp_model') 
 
 
 test_loss, test_accuracy = model.evaluate(x_test, y_test)
