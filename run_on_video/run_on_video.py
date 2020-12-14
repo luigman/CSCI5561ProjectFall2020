@@ -35,15 +35,15 @@ for filename in sorted(os.listdir(vidName)):
     #Get true past and future hand positions
     trueHand = []
     for i in range(5):
-        if handsList[frameNum+i].size >0:
-            handx, handy = getCentroid(handsList[frameNum+i,0].bbox)
+        if len(handsList[frameNum+i]) >0:
+            handx, handy = getCentroid(handsList[frameNum+i][0].bbox)
             trueHand.append(np.array([handx, handy]))
     trueHand = np.array(trueHand)
 
     pastHand = []
     for i in range(min(5,frameNum)):
-        if handsList[frameNum-i].size >0:
-            handx, handy = getCentroid(handsList[frameNum-i,0].bbox)
+        if len(handsList[frameNum-i]) >0:
+            handx, handy = getCentroid(handsList[frameNum-i][0].bbox)
             pastHand.append(np.array([handx, handy]))
     pastHand = np.array(pastHand)
 
@@ -64,7 +64,6 @@ for filename in sorted(os.listdir(vidName)):
 
     if len(predictedSeries) > 0:
         print("Has prediction")
-        print(predictedSeries.shape)
         #MLP code goes here
         def rowNorm(X):
             return np.sum(np.abs(X)**2,axis=-1)**(1./2)
@@ -72,8 +71,8 @@ for filename in sorted(os.listdir(vidName)):
         m = 1106.50695399817    # Max value of training data after taking norm. Need to divide by this to get accurate results from the model
         x1 = (x1 / m).reshape((-1,5))
         y_pred = modelMLP.predict(x1)
-        print(y_pred)
         contact_prob = y_pred[0,1]
+        plt.text(0,0,"Contact Probability: " + str(contact_prob))
 
     if showPlot:
         plt.imshow(img)
