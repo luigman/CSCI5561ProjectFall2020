@@ -1,7 +1,7 @@
 import tensorflow as tf
 #Fixes "Fail to find the dnn implementation." error on my computer
-#physical_devices = tf.config.list_physical_devices('GPU')
-#tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
+physical_devices = tf.config.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -49,7 +49,7 @@ def undo_normalize(norm_points, start_point, max):
     return data_points
 
 #takes in previous 8 points to calculate prediction
-def lstm_return_predict(prev_8, num_steps_pred):
+def lstm_return_predict(prev_8, num_steps_pred, model):
     assert len(prev_8) == 8
     # print(prev_8)
     #max values from training
@@ -58,7 +58,7 @@ def lstm_return_predict(prev_8, num_steps_pred):
 
     #Right now the LSTM is trained to predict one step ahead based off of previous 8 timesteps
     #If you want this changed I can try training off of more or fewer
-    model = tf.keras.models.load_model('lstm_model_best')
+    #model = tf.keras.models.load_model(model_dir) #get model from args for faster runtime
 
     prev_8_new = np.reshape(norm_data, (1,len(norm_data),2))
     prediction = np.zeros((num_steps_pred,2))
