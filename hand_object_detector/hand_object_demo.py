@@ -151,7 +151,7 @@ def _get_image_blob(im):
 
   return blob, np.array(im_scale_factors)
 
-def run():
+def run(person_to_run, subsample):
 
   args = parse_args()
 
@@ -233,194 +233,194 @@ def run():
 
     # print(f'thresh_hand = {thresh_hand}')
     # print(f'thnres_obj = {thresh_obj}')
-    subsample = 1000
     for root, directories, filenames in os.walk(args.image_dir): 
-      for filename in filenames:  
-        impath = os.path.join(root,filename)
-        if (not impath.endswith(".jpg")):
-          print("Not a jpg. Skipping...")
-        elif int(filename[6:-4]) % subsample == 0:
-          print(impath)
-          pathList = impath.split('/')
-          pathList[pathList.index("images")] = "images_det"
-          save_path = "/".join(pathList[:-1]) + "/"
+      if person_to_run in root:
+        for filename in sorted(filenames):  
+          impath = os.path.join(root,filename)
+          if (not impath.endswith(".jpg")):
+            print("Not a jpg. Skipping...")
+          elif int(filename[6:-4]) % subsample == 0:
+            print(impath)
+            pathList = impath.split('/')
+            pathList[pathList.index("images")] = "images_det"
+            save_path = "/".join(pathList[:-1]) + "/"
 
-          webcam_num = args.webcam_num
-          # Set up webcam or get image directories
-          #if webcam_num >= 0 :
-          #  cap = cv2.VideoCapture(webcam_num)
-          #  num_images = 0
-          #else:
-          #print(f'image dir = {args.image_dir}')
-          #print(f'save dir = {args.save_dir}')
-          imglist = os.listdir(root)
-          #num_images = len(imglist)
+            webcam_num = args.webcam_num
+            # Set up webcam or get image directories
+            #if webcam_num >= 0 :
+            #  cap = cv2.VideoCapture(webcam_num)
+            #  num_images = 0
+            #else:
+            #print(f'image dir = {args.image_dir}')
+            #print(f'save dir = {args.save_dir}')
+            imglist = os.listdir(root)
+            #num_images = len(imglist)
 
-          #print('Loaded Photo: {} images.'.format(num_images))
+            #print('Loaded Photo: {} images.'.format(num_images))
 
-          #while (num_images > 0):
-          total_tic = time.time()
-          #if webcam_num == -1:
-          #  num_images -= 1
+            #while (num_images > 0):
+            total_tic = time.time()
+            #if webcam_num == -1:
+            #  num_images -= 1
 
-          # Get image from the webcam
-          if webcam_num >= 0:
-            if not cap.isOpened():
-              raise RuntimeError("Webcam could not open. Please check connection.")
-            ret, frame = cap.read()
-            im_in = np.array(frame)
-          # Load the demo image
-          else:
-            im_file = impath
-            im_in = np.array(imread(im_file))
-            # resize
-            # im_in = np.array(Image.fromarray(im_in).resize((640, 360)))
-          if len(im_in.shape) == 2:
-            im_in = im_in[:,:,np.newaxis]
-            im_in = np.concatenate((im_in,im_in,im_in), axis=2)
-          # rgb -> bgr
-          im = im_in[:,:,::-1]
-
-          blobs, im_scales = _get_image_blob(im)
-          assert len(im_scales) == 1, "Only single-image batch implemented"
-          im_blob = blobs
-          im_info_np = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
-
-          im_data_pt = torch.from_numpy(im_blob)
-          im_data_pt = im_data_pt.permute(0, 3, 1, 2)
-          im_info_pt = torch.from_numpy(im_info_np)
-
-          with torch.no_grad():
-                  im_data.resize_(im_data_pt.size()).copy_(im_data_pt)
-                  im_info.resize_(im_info_pt.size()).copy_(im_info_pt)
-                  gt_boxes.resize_(1, 1, 5).zero_()
-                  num_boxes.resize_(1).zero_()
-                  box_info.resize_(1, 1, 5).zero_() 
-
-          # pdb.set_trace()
-          det_tic = time.time()
-
-          rois, cls_prob, bbox_pred, \
-          rpn_loss_cls, rpn_loss_box, \
-          RCNN_loss_cls, RCNN_loss_bbox, \
-          rois_label, loss_list = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, box_info) 
-
-          scores = cls_prob.data
-          boxes = rois.data[:, :, 1:5]
-
-          # extact predicted params
-          contact_vector = loss_list[0][0] # hand contact state info
-          offset_vector = loss_list[1][0].detach() # offset vector (factored into a unit vector and a magnitude)
-          lr_vector = loss_list[2][0].detach() # hand side info (left/right)
-
-          # get hand contact 
-          _, contact_indices = torch.max(contact_vector, 2)
-          contact_indices = contact_indices.squeeze(0).unsqueeze(-1).float()
-
-          # get hand side 
-          lr = torch.sigmoid(lr_vector) > 0.5
-          lr = lr.squeeze(0).float()
-
-          if cfg.TEST.BBOX_REG:
-              # Apply bounding-box regression deltas
-              box_deltas = bbox_pred.data
-              if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
-              # Optionally normalize targets by a precomputed mean and stdev
-                if args.class_agnostic:
-                    if args.cuda > 0:
-                        box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                                  + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
-                    else:
-                        box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS) \
-                                  + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
-
-                    box_deltas = box_deltas.view(1, -1, 4)
-                else:
-                    if args.cuda > 0:
-                        box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                                  + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
-                    else:
-                        box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS) \
-                                  + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
-                    box_deltas = box_deltas.view(1, -1, 4 * len(pascal_classes))
-
-              pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
-              pred_boxes = clip_boxes(pred_boxes, im_info.data, 1)
-          else:
-              # Simply repeat the boxes, once for each class
-              pred_boxes = np.tile(boxes, (1, scores.shape[1]))
-
-          pred_boxes /= im_scales[0]
-
-          scores = scores.squeeze()
-          pred_boxes = pred_boxes.squeeze()
-          det_toc = time.time()
-          detect_time = det_toc - det_tic
-          misc_tic = time.time()
-          if vis:
-              im2show = np.copy(im)
-          obj_dets, hand_dets = None, None
-          for j in xrange(1, len(pascal_classes)):
-              # inds = torch.nonzero(scores[:,j] > thresh).view(-1)
-              if pascal_classes[j] == 'hand':
-                inds = torch.nonzero(scores[:,j]>thresh_hand).view(-1)
-              elif pascal_classes[j] == 'targetobject':
-                inds = torch.nonzero(scores[:,j]>thresh_obj).view(-1)
-
-              # if there is det
-              if inds.numel() > 0:
-                cls_scores = scores[:,j][inds]
-                _, order = torch.sort(cls_scores, 0, True)
-                if args.class_agnostic:
-                  cls_boxes = pred_boxes[inds, :]
-                else:
-                  cls_boxes = pred_boxes[inds][:, j * 4:(j + 1) * 4]
-                
-                cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1), contact_indices[inds], offset_vector.squeeze(0)[inds], lr[inds]), 1)
-                cls_dets = cls_dets[order]
-                keep = nms(cls_boxes[order, :], cls_scores[order], cfg.TEST.NMS)
-                cls_dets = cls_dets[keep.view(-1).long()]
-                if pascal_classes[j] == 'targetobject':
-                  obj_dets = cls_dets.cpu().numpy()
-                if pascal_classes[j] == 'hand':
-                  hand_dets = cls_dets.cpu().numpy()
-                
-          if vis:
-            # visualization
-            im2show,bbox_array = vis_detections_filtered_objects_PIL(im2show, obj_dets, hand_dets, thresh_hand, thresh_obj)
-            if hand_dets is not None:
-              hand_array = hand_dets[:,:4]
+            # Get image from the webcam
+            if webcam_num >= 0:
+              if not cap.isOpened():
+                raise RuntimeError("Webcam could not open. Please check connection.")
+              ret, frame = cap.read()
+              im_in = np.array(frame)
+            # Load the demo image
             else:
-              hand_array = hand_dets
-            path = os.path.join(save_path, filename[:-4] + ".npz")
-            bbox_array = bbox_array.reshape((-1,4))
-            if not(os.path.exists(save_path)):
-              os.makedirs(save_path)
-            np.savez(path,objects=bbox_array,hands=hand_array)
+              im_file = impath
+              im_in = np.array(imread(im_file))
+              # resize
+              # im_in = np.array(Image.fromarray(im_in).resize((640, 360)))
+            if len(im_in.shape) == 2:
+              im_in = im_in[:,:,np.newaxis]
+              im_in = np.concatenate((im_in,im_in,im_in), axis=2)
+            # rgb -> bgr
+            im = im_in[:,:,::-1]
 
-          misc_toc = time.time()
-          nms_time = misc_toc - misc_tic
+            blobs, im_scales = _get_image_blob(im)
+            assert len(im_scales) == 1, "Only single-image batch implemented"
+            im_blob = blobs
+            im_info_np = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
 
-          #if webcam_num == -1:
-          #    sys.stdout.write('im_detect: {:d}/{:d} {:.3f}s {:.3f}s   \r' \
-          #                    .format(num_images + 1, len(imglist), detect_time, nms_time))
-          #    sys.stdout.flush()
+            im_data_pt = torch.from_numpy(im_blob)
+            im_data_pt = im_data_pt.permute(0, 3, 1, 2)
+            im_info_pt = torch.from_numpy(im_info_np)
 
-          if vis and webcam_num == -1:
-              
-              folder_name = save_path
-              os.makedirs(folder_name, exist_ok=True)
-              result_path = os.path.join(folder_name, filename[:-4] + "_det.png")
-              im2show.save(result_path)
-          else:
-              im2showRGB = cv2.cvtColor(im2show, cv2.COLOR_BGR2RGB)
-              cv2.imshow("frame", im2showRGB)
-              total_toc = time.time()
-              total_time = total_toc - total_tic
-              frame_rate = 1 / total_time
-              print('Frame rate:', frame_rate)
-              if cv2.waitKey(1) & 0xFF == ord('q'):
-                  break
+            with torch.no_grad():
+                    im_data.resize_(im_data_pt.size()).copy_(im_data_pt)
+                    im_info.resize_(im_info_pt.size()).copy_(im_info_pt)
+                    gt_boxes.resize_(1, 1, 5).zero_()
+                    num_boxes.resize_(1).zero_()
+                    box_info.resize_(1, 1, 5).zero_() 
+
+            # pdb.set_trace()
+            det_tic = time.time()
+
+            rois, cls_prob, bbox_pred, \
+            rpn_loss_cls, rpn_loss_box, \
+            RCNN_loss_cls, RCNN_loss_bbox, \
+            rois_label, loss_list = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, box_info) 
+
+            scores = cls_prob.data
+            boxes = rois.data[:, :, 1:5]
+
+            # extact predicted params
+            contact_vector = loss_list[0][0] # hand contact state info
+            offset_vector = loss_list[1][0].detach() # offset vector (factored into a unit vector and a magnitude)
+            lr_vector = loss_list[2][0].detach() # hand side info (left/right)
+
+            # get hand contact 
+            _, contact_indices = torch.max(contact_vector, 2)
+            contact_indices = contact_indices.squeeze(0).unsqueeze(-1).float()
+
+            # get hand side 
+            lr = torch.sigmoid(lr_vector) > 0.5
+            lr = lr.squeeze(0).float()
+
+            if cfg.TEST.BBOX_REG:
+                # Apply bounding-box regression deltas
+                box_deltas = bbox_pred.data
+                if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
+                # Optionally normalize targets by a precomputed mean and stdev
+                  if args.class_agnostic:
+                      if args.cuda > 0:
+                          box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
+                                    + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                      else:
+                          box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS) \
+                                    + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
+
+                      box_deltas = box_deltas.view(1, -1, 4)
+                  else:
+                      if args.cuda > 0:
+                          box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
+                                    + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                      else:
+                          box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS) \
+                                    + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
+                      box_deltas = box_deltas.view(1, -1, 4 * len(pascal_classes))
+
+                pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
+                pred_boxes = clip_boxes(pred_boxes, im_info.data, 1)
+            else:
+                # Simply repeat the boxes, once for each class
+                pred_boxes = np.tile(boxes, (1, scores.shape[1]))
+
+            pred_boxes /= im_scales[0]
+
+            scores = scores.squeeze()
+            pred_boxes = pred_boxes.squeeze()
+            det_toc = time.time()
+            detect_time = det_toc - det_tic
+            misc_tic = time.time()
+            if vis:
+                im2show = np.copy(im)
+            obj_dets, hand_dets = None, None
+            for j in xrange(1, len(pascal_classes)):
+                # inds = torch.nonzero(scores[:,j] > thresh).view(-1)
+                if pascal_classes[j] == 'hand':
+                  inds = torch.nonzero(scores[:,j]>thresh_hand).view(-1)
+                elif pascal_classes[j] == 'targetobject':
+                  inds = torch.nonzero(scores[:,j]>thresh_obj).view(-1)
+
+                # if there is det
+                if inds.numel() > 0:
+                  cls_scores = scores[:,j][inds]
+                  _, order = torch.sort(cls_scores, 0, True)
+                  if args.class_agnostic:
+                    cls_boxes = pred_boxes[inds, :]
+                  else:
+                    cls_boxes = pred_boxes[inds][:, j * 4:(j + 1) * 4]
+                  
+                  cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1), contact_indices[inds], offset_vector.squeeze(0)[inds], lr[inds]), 1)
+                  cls_dets = cls_dets[order]
+                  keep = nms(cls_boxes[order, :], cls_scores[order], cfg.TEST.NMS)
+                  cls_dets = cls_dets[keep.view(-1).long()]
+                  if pascal_classes[j] == 'targetobject':
+                    obj_dets = cls_dets.cpu().numpy()
+                  if pascal_classes[j] == 'hand':
+                    hand_dets = cls_dets.cpu().numpy()
+                  
+            if vis:
+              # visualization
+              im2show,bbox_array = vis_detections_filtered_objects_PIL(im2show, obj_dets, hand_dets, thresh_hand, thresh_obj)
+              if hand_dets is not None:
+                hand_array = hand_dets[:,:4]
+              else:
+                hand_array = hand_dets
+              path = os.path.join(save_path, filename[:-4] + ".npz")
+              bbox_array = bbox_array.reshape((-1,4))
+              if not(os.path.exists(save_path)):
+                os.makedirs(save_path)
+              np.savez(path,objects=bbox_array,hands=hand_array)
+
+            misc_toc = time.time()
+            nms_time = misc_toc - misc_tic
+
+            #if webcam_num == -1:
+            #    sys.stdout.write('im_detect: {:d}/{:d} {:.3f}s {:.3f}s   \r' \
+            #                    .format(num_images + 1, len(imglist), detect_time, nms_time))
+            #    sys.stdout.flush()
+
+            if vis and webcam_num == -1:
+                
+                folder_name = save_path
+                os.makedirs(folder_name, exist_ok=True)
+                result_path = os.path.join(folder_name, filename[:-4] + "_det.png")
+                im2show.save(result_path)
+            else:
+                im2showRGB = cv2.cvtColor(im2show, cv2.COLOR_BGR2RGB)
+                cv2.imshow("frame", im2showRGB)
+                total_toc = time.time()
+                total_time = total_toc - total_tic
+                frame_rate = 1 / total_time
+                print('Frame rate:', frame_rate)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
                 
       #if webcam_num >= 0:
       #    cap.release()
