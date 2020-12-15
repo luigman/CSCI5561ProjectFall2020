@@ -24,12 +24,15 @@ modelMLP = tf.keras.models.load_model('../mlp_contact_prediction/mlp_model',comp
 
 errors = []
 for filename in sorted(os.listdir(vidName)):
+    if True:
+        break
+    fig = plt.figure()
     showPlot = False
     predictedSeries = []
     centroids_location = [] 
     print(filename)
     frameNum = int(filename.split('.')[0][6:])
-    if frameNum < 5:
+    if frameNum < 6:
         continue
     img = cv.imread(vidName+'/frame_'+str(frameNum-5).zfill(10)+'.jpg')
     print("Displaying:", vidName+'/frame_'+str(frameNum-5).zfill(10)+'.jpg')
@@ -82,19 +85,34 @@ for filename in sorted(os.listdir(vidName)):
 
             frameLabelPred = contact_prob[-1] > 0.5
             errors.append(frameLabel == frameLabelPred)
-
         centroids_location = np.array(centroids_location) 
         for i in range(centroids_location.shape[0]): 
             plt.text(centroids_location[i][0],centroids_location[i][1],"P: " + f'{contact_prob[i]:.2f}',fontsize=10) 
 
 
-    if showPlot:
-        plt.imshow(img)
+    
         #plt.plot(trueHand[:,0], trueHand[:,1], label="True Motion")
         #if pastHand.size>1:
             #plt.plot(pastHand[:,0], pastHand[:,1], label="Past Motion")
         plt.legend()
-        plt.savefig("saved_imgs/" + filename) 
-        plt.show()
+    plt.imshow(img)
+    plt.savefig("saved_imgs/" + filename) 
+    #if showPlot:
+    #    plt.show()
 
 print("Accuracy:", np.sum(errors)/len(errors))
+
+image_folder = 'saved_imgs/'
+video_name = 'video.mp4'
+
+images = [img for img in sorted(os.listdir(image_folder)) if img.endswith(".jpg")]
+frame = cv.imread(os.path.join(image_folder, images[0]))
+height, width, layers = frame.shape
+
+video = cv.VideoWriter(video_name, 0x7634706d, 30, (width,height))
+
+for image in images:
+    video.write(cv.imread(os.path.join(image_folder, image)))
+
+cv.destroyAllWindows()
+video.release()
