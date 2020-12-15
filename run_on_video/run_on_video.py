@@ -24,7 +24,7 @@ modelMLP = tf.keras.models.load_model('../mlp_contact_prediction/mlp_model',comp
 
 errors = []
 for filename in sorted(os.listdir(vidName)):
-    if True:
+    if False: #Set True to only process video
         break
     fig = plt.figure()
     showPlot = False
@@ -35,7 +35,8 @@ for filename in sorted(os.listdir(vidName)):
     if frameNum < 6:
         continue
     img = cv.imread(vidName+'/frame_'+str(frameNum-5).zfill(10)+'.jpg')
-    print("Displaying:", vidName+'/frame_'+str(frameNum-5).zfill(10)+'.jpg')
+    img = cv.cvtColor(img, cv.COLOR_RGB2BGR)
+    #print("Displaying:", vidName+'/frame_'+str(frameNum-5).zfill(10)+'.jpg')
     
     #Get true past and future hand positions
     #trueHand = []
@@ -65,9 +66,7 @@ for filename in sorted(os.listdir(vidName)):
         centroids_location.append((objBBsPrev[i]))  # make sure to get the probabilities in the same order as the boxes appear 
 
         cv.rectangle(img,(objBBsPrev[i][0], objBBsPrev[i][1]),(objBBsPrev[i][2], objBBsPrev[i][3]), (0,255,0),2)
-        plt.plot(objx-pastSeries[:,0], objy-pastSeries[:,1], label='Past Series')
-        plt.plot(objx-futureSeries[:,0], objy-futureSeries[:,1], label='Future Series')
-        plt.plot(objx-predictedSeries[-1][:,0], objy-predictedSeries[-1][:,1], label='Predicted Series')
+    
 
     contact_prob = []
     if len(predictedSeries) > 0:
@@ -90,11 +89,13 @@ for filename in sorted(os.listdir(vidName)):
             plt.text(centroids_location[i][0],centroids_location[i][1],"P: " + f'{contact_prob[i]:.2f}',fontsize=10) 
 
 
-    
+        plt.plot(objx-pastSeries[:,0], objy-pastSeries[:,1], label='Past Series')
+        plt.plot(objx-futureSeries[:,0], objy-futureSeries[:,1], label='Future Series')
+        plt.plot(objx-predictedSeries[-1][:,0], objy-predictedSeries[-1][:,1], label='Predicted Series')
         #plt.plot(trueHand[:,0], trueHand[:,1], label="True Motion")
         #if pastHand.size>1:
             #plt.plot(pastHand[:,0], pastHand[:,1], label="Past Motion")
-        plt.legend()
+        plt.legend(loc="upper left")
     plt.imshow(img)
     plt.savefig("saved_imgs/" + filename) 
     #if showPlot:
