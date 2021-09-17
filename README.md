@@ -1,3 +1,7 @@
-# CSCI5561ProjectFall2020
+# Egocentric Prediction of Hand-Object Interaction
 
-A single python script runs both networks and computes the IoUs. Just run hand_object_processing/hand_object_processing.py and it outputs to text files in images_det.
+This project uses first-person video to predict hand-object contact using a MaskRCNN for object detection and LSTM for trajectory prediction. Also see the [project report](https://www.luisjguzman.com/media/Csci5561/Project_Report__Egocentric_Prediction_of_Hand_Object_Interaction.pdf) and [project video](https://youtu.be/nKqXu4bZbFY).
+
+![image](./results.png)
+
+The main functions can be run with `python run_on_video/run_on_video.py`.
